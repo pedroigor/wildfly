@@ -24,15 +24,25 @@ package org.wildfly.extension.picketlink.federation.model.idp;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.access.constraint.SensitivityClassification;
+import org.jboss.as.controller.access.management.AccessConstraintDefinition;
+import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.dmr.ModelType;
-import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
+import org.wildfly.extension.picketlink.federation.FederationExtension;
+import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
+
+import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class TrustDomainResourceDefinition extends AbstractFederationResourceDefinition {
+
+    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
+        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-identity-provider-trust-domain", false, false, true)
+    ).wrapAsList();
 
     public static final SimpleAttributeDefinition CERT_ALIAS = new SimpleAttributeDefinitionBuilder(ModelElement.IDENTITY_PROVIDER_TRUST_DOMAIN_CERT_ALIAS.getName(), ModelType.STRING, true)
         .setAllowExpression(true)
@@ -42,5 +52,10 @@ public class TrustDomainResourceDefinition extends AbstractFederationResourceDef
 
     private TrustDomainResourceDefinition() {
         super(ModelElement.IDENTITY_PROVIDER_TRUST_DOMAIN, TrustDomainAddHandler.INSTANCE, TrustDomainRemoveHandler.INSTANCE, CERT_ALIAS);
+    }
+
+    @Override
+    public List<AccessConstraintDefinition> getAccessConstraints() {
+        return CONSTRAINTS;
     }
 }

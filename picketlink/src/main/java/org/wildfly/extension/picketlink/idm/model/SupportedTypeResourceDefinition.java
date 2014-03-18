@@ -24,15 +24,25 @@ package org.wildfly.extension.picketlink.idm.model;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.access.constraint.SensitivityClassification;
+import org.jboss.as.controller.access.management.AccessConstraintDefinition;
+import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
+import org.wildfly.extension.picketlink.federation.FederationExtension;
+
+import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class SupportedTypeResourceDefinition extends AbstractIDMResourceDefinition {
+
+    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
+        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-idm-store-supported-type", false, false, true)
+    ).wrapAsList();
 
     public static final SimpleAttributeDefinition CLASS_NAME = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_CLASS_NAME.getName(), ModelType.STRING, true)
         .setAllowExpression(true)
@@ -51,5 +61,10 @@ public class SupportedTypeResourceDefinition extends AbstractIDMResourceDefiniti
 
     private SupportedTypeResourceDefinition(SimpleAttributeDefinition... attributes) {
         super(ModelElement.SUPPORTED_TYPE, new IDMConfigAddStepHandler(attributes), attributes);
+    }
+
+    @Override
+    public List<AccessConstraintDefinition> getAccessConstraints() {
+        return CONSTRAINTS;
     }
 }

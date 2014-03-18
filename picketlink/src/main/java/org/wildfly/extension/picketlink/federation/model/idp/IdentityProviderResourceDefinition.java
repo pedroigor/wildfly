@@ -25,12 +25,18 @@ package org.wildfly.extension.picketlink.federation.model.idp;
 import org.jboss.as.controller.ExtensionContext;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.access.constraint.SensitivityClassification;
+import org.jboss.as.controller.access.management.AccessConstraintDefinition;
+import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
+import org.wildfly.extension.picketlink.federation.FederationExtension;
 import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
 import org.wildfly.extension.picketlink.federation.model.handlers.HandlerResourceDefinition;
+
+import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
@@ -38,10 +44,15 @@ import org.wildfly.extension.picketlink.federation.model.handlers.HandlerResourc
  */
 public class IdentityProviderResourceDefinition extends AbstractFederationResourceDefinition {
 
+    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
+        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-identity-provider", false, false, true)
+    ).wrapAsList();
+
     public static final SimpleAttributeDefinition URL = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_URL.getName(), ModelType.STRING, false)
         .setAllowExpression(true)
         .build();
     public static final SimpleAttributeDefinition SECURITY_DOMAIN = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_SECURITY_DOMAIN.getName(), ModelType.STRING, true)
+        .setAccessConstraints(SensitiveTargetAccessConstraintDefinition.SECURITY_DOMAIN_REF)
         .build();
     public static final SimpleAttributeDefinition ENCRYPT = new SimpleAttributeDefinitionBuilder(ModelElement.IDENTITY_PROVIDER_ENCRYPT.getName(), ModelType.BOOLEAN, true)
         .setDefaultValue(new ModelNode().set(false))
@@ -100,5 +111,10 @@ public class IdentityProviderResourceDefinition extends AbstractFederationResour
                 resourceRegistration.registerMetric(def, IdentityProviderMetricsOperationHandler.INSTANCE);
             }
         }
+    }
+
+    @Override
+    public List<AccessConstraintDefinition> getAccessConstraints() {
+        return CONSTRAINTS;
     }
 }
