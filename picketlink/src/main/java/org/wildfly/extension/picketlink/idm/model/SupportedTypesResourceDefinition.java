@@ -24,26 +24,16 @@ package org.wildfly.extension.picketlink.idm.model;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
-import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.FederationExtension;
-
-import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class SupportedTypesResourceDefinition extends AbstractIDMResourceDefinition {
-
-    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-idm-store-supported-types", false, false, true)
-    ).wrapAsList();
 
     public static final SimpleAttributeDefinition SUPPORTS_ALL = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_SUPPORTS_ALL.getName(), ModelType.BOOLEAN, true)
         .setDefaultValue(new ModelNode(false))
@@ -58,10 +48,5 @@ public class SupportedTypesResourceDefinition extends AbstractIDMResourceDefinit
     @Override
     public void registerChildren(ManagementResourceRegistration resourceRegistration) {
         addChildResourceDefinition(SupportedTypeResourceDefinition.INSTANCE, resourceRegistration);
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return CONSTRAINTS;
     }
 }

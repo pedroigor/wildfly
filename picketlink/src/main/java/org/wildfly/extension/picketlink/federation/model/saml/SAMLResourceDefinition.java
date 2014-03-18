@@ -24,26 +24,16 @@ package org.wildfly.extension.picketlink.federation.model.saml;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
-import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.FederationExtension;
 import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
-
-import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class SAMLResourceDefinition extends AbstractFederationResourceDefinition {
-
-    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-federation-saml-configuration", false, false, true)
-    ).wrapAsList();
 
     public static final SimpleAttributeDefinition TOKEN_TIMEOUT = new SimpleAttributeDefinitionBuilder(ModelElement.SAML_TOKEN_TIMEOUT.getName(), ModelType.INT, true)
         .setDefaultValue(new ModelNode(5000))
@@ -58,10 +48,5 @@ public class SAMLResourceDefinition extends AbstractFederationResourceDefinition
 
     private SAMLResourceDefinition() {
         super(ModelElement.SAML, ModelElement.SAML.getName(), SAMLAddHandler.INSTANCE, SAMLRemoveHandler.INSTANCE, TOKEN_TIMEOUT, CLOCK_SKEW);
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return CONSTRAINTS;
     }
 }

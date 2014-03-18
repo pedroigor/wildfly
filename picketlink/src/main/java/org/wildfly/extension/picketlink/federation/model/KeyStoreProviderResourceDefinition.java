@@ -24,24 +24,15 @@ package org.wildfly.extension.picketlink.federation.model;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.FederationExtension;
-
-import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class KeyStoreProviderResourceDefinition extends AbstractFederationResourceDefinition {
-
-    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-federation-key-provider", false, false, true)
-    ).wrapAsList();
 
     public static final SimpleAttributeDefinition FILE = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_FILE.getName(), ModelType.STRING, false)
         .setAllowExpression(true)
@@ -67,10 +58,5 @@ public class KeyStoreProviderResourceDefinition extends AbstractFederationResour
 
     private KeyStoreProviderResourceDefinition() {
         super(ModelElement.KEY_STORE, ModelElement.KEY_STORE.getName(), KeyStoreProviderAddHandler.INSTANCE, KeyStoreProviderRemoveHandler.INSTANCE, FILE, RELATIVE_TO, PASSWORD, SIGN_KEY_ALIAS, SIGN_KEY_PASSWORD);
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return CONSTRAINTS;
     }
 }

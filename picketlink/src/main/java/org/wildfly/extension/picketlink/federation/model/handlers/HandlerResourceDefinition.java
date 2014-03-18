@@ -24,27 +24,17 @@ package org.wildfly.extension.picketlink.federation.model.handlers;
 
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
-import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.FederationExtension;
 import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
-
-import java.util.List;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
 public class HandlerResourceDefinition extends AbstractFederationResourceDefinition {
-
-    private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-entity-provider-handler", false, false, true)
-    ).wrapAsList();
 
     public static final SimpleAttributeDefinition CLASS = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_CLASS_NAME.getName(), ModelType.STRING, true)
         .setAllowExpression(true)
@@ -61,11 +51,6 @@ public class HandlerResourceDefinition extends AbstractFederationResourceDefinit
 
     private HandlerResourceDefinition() {
         super(ModelElement.COMMON_HANDLER, HandlerAddHandler.INSTANCE, HandlerRemoveHandler.INSTANCE, CLASS, CODE);
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return CONSTRAINTS;
     }
 
     @Override

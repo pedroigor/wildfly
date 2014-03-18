@@ -41,7 +41,7 @@ import java.util.List;
 public class PartitionManagerResourceDefinition extends AbstractIDMResourceDefinition {
 
     private static final List<AccessConstraintDefinition> CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-idm-partition-manager", false, false, true)
+        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-idm-partition-manager", false, true, true)
     ).wrapAsList();
 
     public static final SimpleAttributeDefinition IDENTITY_MANAGEMENT_JNDI_URL = new SimpleAttributeDefinitionBuilder(ModelElement.IDENTITY_MANAGEMENT_JNDI_NAME.getName(), ModelType.STRING, false).setAllowExpression(true).build();

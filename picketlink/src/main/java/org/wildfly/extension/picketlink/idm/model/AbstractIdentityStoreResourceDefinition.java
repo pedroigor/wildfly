@@ -25,21 +25,11 @@ package org.wildfly.extension.picketlink.idm.model;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
-import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.FederationExtension;
-
-import java.util.List;
 
 public abstract class AbstractIdentityStoreResourceDefinition extends AbstractIDMResourceDefinition {
-
-    private static final List<AccessConstraintDefinition> IDENTITY_STORE_CONSTRAINTS = new SensitiveTargetAccessConstraintDefinition(
-        new SensitivityClassification(FederationExtension.SUBSYSTEM_NAME, "picketlink-idm-store", false, false, true)
-    ).wrapAsList();
 
     public static final SimpleAttributeDefinition SUPPORT_ATTRIBUTE = new SimpleAttributeDefinitionBuilder(ModelElement.IDENTITY_STORE_SUPPORT_ATTRIBUTE.getName(), ModelType.BOOLEAN, true)
         .setDefaultValue(new ModelNode(true))
@@ -53,10 +43,5 @@ public abstract class AbstractIdentityStoreResourceDefinition extends AbstractID
 
     protected AbstractIdentityStoreResourceDefinition(ModelElement modelElement, OperationStepHandler addHandler, SimpleAttributeDefinition... attributes) {
         super(modelElement, addHandler, attributes);
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return IDENTITY_STORE_CONSTRAINTS;
     }
 }
