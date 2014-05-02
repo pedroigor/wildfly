@@ -87,7 +87,7 @@
                 <handler code="SAML2IssuerTrustHandler"/>
                 <handler code="SAML2LogOutHandler"/>
                 <handler code="SAML2AuthenticationHandler"/>
-                <handler class-name="RolesGenerationHandler"/>
+                <handler class-name="org.picketlink.identity.federation.web.handlers.saml2.RolesGenerationHandler"/>
             </handlers>
         </identity-provider>
         <service-providers>

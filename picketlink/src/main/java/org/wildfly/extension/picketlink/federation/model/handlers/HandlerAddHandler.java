@@ -47,6 +47,7 @@ import java.util.List;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ADDRESS;
 import static org.wildfly.extension.picketlink.PicketLinkMessages.MESSAGES;
+import static org.wildfly.extension.picketlink.common.ClassUtil.loadClass;
 import static org.wildfly.extension.picketlink.common.model.ModelElement.COMMON_HANDLER_PARAMETER;
 import static org.wildfly.extension.picketlink.common.model.ModelElement.IDENTITY_PROVIDER;
 import static org.wildfly.extension.picketlink.federation.service.SAMLHandlerService.createServiceName;
@@ -66,6 +67,7 @@ public class HandlerAddHandler extends AbstractAddStepHandler {
         Handler newHandler = new Handler();
 
         ModelNode classNameNode = HandlerResourceDefinition.CLASS.resolveModelAttribute(context, model);
+        ModelNode moduleNode = HandlerResourceDefinition.MODULE.resolveModelAttribute(context, model);
         ModelNode codeNode = HandlerResourceDefinition.CODE.resolveModelAttribute(context, model);
         String typeName;
 
@@ -77,7 +79,7 @@ public class HandlerAddHandler extends AbstractAddStepHandler {
             throw MESSAGES.federationHandlerTypeNotProvided();
         }
 
-        newHandler.setClazz(typeName);
+        newHandler.setType(loadClass(moduleNode, typeName, HandlerAddHandler.class.getClassLoader()));
 
         ModelNode handler = Resource.Tools.readModel(context.readResourceFromRoot(pathAddress));
 
@@ -101,7 +103,7 @@ public class HandlerAddHandler extends AbstractAddStepHandler {
 
         ServiceTarget serviceTarget = context.getServiceTarget();
         ServiceBuilder<SAMLHandlerService> serviceBuilder = serviceTarget.addService(createServiceName(providerAlias
-            .getValue(), newHandler.getClazz()), service);
+            .getValue(), typeName), service);
         ServiceName serviceName;
 
         if (providerAlias.getKey().equals(IDENTITY_PROVIDER.getName())) {

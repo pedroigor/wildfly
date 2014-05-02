@@ -41,6 +41,11 @@ public class HandlerResourceDefinition extends AbstractFederationResourceDefinit
         .setAlternatives(ModelElement.COMMON_CODE.getName())
         .build();
 
+    public static final SimpleAttributeDefinition MODULE = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_MODULE.getName(), ModelType.STRING, true)
+        .setAllowExpression(true)
+        .setRequires(ModelElement.COMMON_CLASS_NAME.getName())
+        .build();
+
     public static final SimpleAttributeDefinition CODE = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_CODE.getName(), ModelType.STRING, true)
         .setValidator(new EnumValidator<HandlerTypeEnum>(HandlerTypeEnum.class, true, true))
         .setAllowExpression(true)
