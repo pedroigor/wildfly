@@ -55,7 +55,7 @@ public class HandlerResourceDefinition extends AbstractFederationResourceDefinit
     public static final HandlerResourceDefinition INSTANCE = new HandlerResourceDefinition();
 
     private HandlerResourceDefinition() {
-        super(ModelElement.COMMON_HANDLER, HandlerAddHandler.INSTANCE, HandlerRemoveHandler.INSTANCE, CLASS, CODE);
+        super(ModelElement.COMMON_HANDLER, HandlerAddHandler.INSTANCE, HandlerRemoveHandler.INSTANCE, CLASS, CODE, MODULE);
     }
 
     @Override
