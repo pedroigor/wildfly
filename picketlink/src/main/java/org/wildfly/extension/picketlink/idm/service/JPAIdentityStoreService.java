@@ -30,12 +30,14 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.InjectedValue;
+import org.picketlink.idm.IdentityManagementException;
 import org.picketlink.idm.jpa.internal.JPAIdentityStore;
 import org.picketlink.idm.spi.ContextInitializer;
 import org.picketlink.idm.spi.IdentityContext;
 import org.picketlink.idm.spi.IdentityStore;
 import org.wildfly.extension.picketlink.idm.config.JPAStoreSubsystemConfiguration;
 import org.wildfly.extension.picketlink.idm.config.JPAStoreSubsystemConfigurationBuilder;
+import org.wildfly.extension.picketlink.logging.PicketLinkLogger;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -44,10 +46,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.metamodel.EntityType;
 import javax.transaction.Status;
+import javax.transaction.Synchronization;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
-import org.wildfly.extension.picketlink.logging.PicketLinkLogger;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -71,6 +72,7 @@ public class JPAIdentityStoreService implements Service<JPAIdentityStoreService>
     private JPAStoreSubsystemConfiguration storeConfig;
     private EntityManagerFactory emf;
     private final InjectedValue<TransactionManager> transactionManager = new InjectedValue<TransactionManager>();
+    private static final ThreadLocal<EntityManager> entityManagerLocal = new ThreadLocal<EntityManager>();
 
     public JPAIdentityStoreService(JPAStoreSubsystemConfigurationBuilder configurationBuilder) {
         this.configurationBuilder = configurationBuilder;
@@ -94,7 +96,8 @@ public class JPAIdentityStoreService implements Service<JPAIdentityStoreService>
             public void initContextForStore(IdentityContext context, IdentityStore<?> store) {
                 if (store instanceof JPAIdentityStore) {
                     if (!context.isParameterSet(JPAIdentityStore.INVOCATION_CTX_ENTITY_MANAGER)) {
-                        context.setParameter(JPAIdentityStore.INVOCATION_CTX_ENTITY_MANAGER, getEntityManager(getTransactionManager().getValue()));
+                        context.setParameter(JPAIdentityStore.INVOCATION_CTX_ENTITY_MANAGER, getTransactionalEntityManager(getTransactionManager()
+                            .getValue()));
                     }
                 }
             }
@@ -199,36 +202,77 @@ public class JPAIdentityStoreService implements Service<JPAIdentityStoreService>
         return false;
     }
 
-    private EntityManager getEntityManager(TransactionManager transactionManager) {
-        return (EntityManager) Proxy.newProxyInstance(Thread.currentThread()
-            .getContextClassLoader(), new Class<?>[]{EntityManager.class}, new EntityManagerInvocationHandler(this.emf
-            .createEntityManager(), this.storeConfig.getEntityModule(), transactionManager));
+    /**
+     * <p>Returns an {@link javax.persistence.EntityManager} associated with the actual {@link javax.transaction.Transaction}.</p>
+     *
+     * <p>An instance is created only if there is no other associated with the <code>entityManagerLocal</code>. Once created,
+     * the instance is going to be associated with the current thread until the transaction is complete.</p>
+     *
+     * <p>This method begins a transaction if no transaction is associated with the {@link javax.transaction.TransactionManager}.</p>
+     *
+     * @param transactionManager The transaction manager.
+     *
+     * @return An {@link javax.persistence.EntityManager}.
+     */
+    private EntityManager getTransactionalEntityManager(TransactionManager transactionManager) {
+        try {
+            if (transactionManager.getStatus() == Status.STATUS_NO_TRANSACTION) {
+                transactionManager.begin();
+            }
+        } catch (Exception e) {
+            throw new IdentityManagementException("Could not begin transaction.", e);
+        }
+
+        EntityManager entityManager = entityManagerLocal.get();
+
+        if (entityManager == null) {
+            try {
+                Transaction transaction = transactionManager.getTransaction();
+
+                if (transaction == null || transaction.getStatus() != Status.STATUS_ACTIVE) {
+                    throw new IllegalStateException("Transaction is not active. Can not create a transactional EntityManager for IDM operation.");
+                }
+
+                transaction.registerSynchronization(new Synchronization() {
+                    @Override
+                    public void beforeCompletion() {
+
+                    }
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        entityManagerLocal.remove();
+                    }
+                });
+
+                entityManager = (EntityManager) Proxy.newProxyInstance(Thread.currentThread()
+                    .getContextClassLoader(), new Class<?>[]{EntityManager.class}, new EntityManagerInvocationHandler(this.emf
+                    .createEntityManager(), this.storeConfig.getEntityModule()));
+
+                entityManagerLocal.set(entityManager);
+            } catch (Exception e) {
+                throw new IdentityManagementException("Could not register syncronization to transaction.", e);
+            }
+        }
+
+        return entityManager;
     }
 
     private class EntityManagerInvocationHandler implements InvocationHandler {
 
         private final EntityManager em;
         private final Module entityModule;
-        private final TransactionManager transactionManager;
 
-        public EntityManagerInvocationHandler(EntityManager em, Module entitiesModule, TransactionManager transactionManager) {
+        public EntityManagerInvocationHandler(EntityManager em, Module entitiesModule) {
             this.em = em;
             this.entityModule = entitiesModule;
-            this.transactionManager = transactionManager;
         }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            Transaction tx = null;
 
             if (isTxRequired(method)) {
-                if (this.transactionManager.getStatus() == Status.STATUS_NO_TRANSACTION) {
-                    this.transactionManager.begin();
-                }
-
                 this.em.joinTransaction();
-
-                tx = this.transactionManager.getTransaction();
             }
 
             ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
@@ -241,11 +285,6 @@ public class JPAIdentityStoreService implements Service<JPAIdentityStoreService>
                 return method.invoke(this.em, args);
             } finally {
                 Thread.currentThread().setContextClassLoader(originalClassLoader);
-
-                if (tx != null) {
-                    tx.commit();
-                    this.transactionManager.suspend();
-                }
             }
         }
 
