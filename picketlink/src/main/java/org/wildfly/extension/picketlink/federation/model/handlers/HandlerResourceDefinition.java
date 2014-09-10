@@ -36,7 +36,7 @@ import org.wildfly.extension.picketlink.federation.model.AbstractFederationResou
  */
 public class HandlerResourceDefinition extends AbstractFederationResourceDefinition {
 
-    public static final SimpleAttributeDefinition CLASS = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_CLASS_NAME.getName(), ModelType.STRING, true)
+    public static final SimpleAttributeDefinition CLASS_NAME = new SimpleAttributeDefinitionBuilder(ModelElement.COMMON_CLASS_NAME.getName(), ModelType.STRING, true)
         .setAllowExpression(true)
         .setAlternatives(ModelElement.COMMON_CODE.getName())
         .build();
@@ -50,7 +50,7 @@ public class HandlerResourceDefinition extends AbstractFederationResourceDefinit
     public static final HandlerResourceDefinition INSTANCE = new HandlerResourceDefinition();
 
     private HandlerResourceDefinition() {
-        super(ModelElement.COMMON_HANDLER, HandlerAddHandler.INSTANCE, HandlerRemoveHandler.INSTANCE, CLASS, CODE);
+        super(ModelElement.COMMON_HANDLER, HandlerAddHandler.INSTANCE, HandlerRemoveHandler.INSTANCE, CLASS_NAME, CODE);
     }
 
     @Override

@@ -100,7 +100,6 @@ public enum ModelElement {
     IDENTITY_PROVIDER("identity-provider"),
     IDENTITY_PROVIDER_TRUST_DOMAIN("trust-domain"),
     IDENTITY_PROVIDER_TRUST_DOMAIN_NAME("name"),
-    IDENTITY_PROVIDER_TRUST_DOMAIN_CERT_ALIAS("cert-alias"),
     IDENTITY_PROVIDER_SAML_METADATA("idp-metadata"),
     IDENTITY_PROVIDER_SAML_METADATA_ORGANIZATION("organization"),
     IDENTITY_PROVIDER_EXTERNAL("external"),
@@ -115,6 +114,8 @@ public enum ModelElement {
     KEY_STORE_PASSWORD("password"),
     KEY_STORE_SIGN_KEY_ALIAS("sign-key-alias"),
     KEY_STORE_SIGN_KEY_PASSWORD("sign-key-password"),
+    HOST("host"),
+    KEY("key"),
     /*
      * Service Provider model elements
      */

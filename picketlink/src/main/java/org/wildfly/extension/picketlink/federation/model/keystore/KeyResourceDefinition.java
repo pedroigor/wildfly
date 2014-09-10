@@ -20,8 +20,11 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.extension.picketlink.federation.model.idp;
+package org.wildfly.extension.picketlink.federation.model.keystore;
 
+import org.jboss.as.controller.SimpleAttributeDefinition;
+import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.dmr.ModelType;
 import org.wildfly.extension.picketlink.common.model.ModelElement;
 import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
 
@@ -29,11 +32,15 @@ import org.wildfly.extension.picketlink.federation.model.AbstractFederationResou
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
  * @since Mar 16, 2012
  */
-public class TrustDomainResourceDefinition extends AbstractFederationResourceDefinition {
+public class KeyResourceDefinition extends AbstractFederationResourceDefinition {
 
-    public static final TrustDomainResourceDefinition INSTANCE = new TrustDomainResourceDefinition();
+    public static final SimpleAttributeDefinition HOST = new SimpleAttributeDefinitionBuilder(ModelElement.HOST.getName(), ModelType.STRING, false)
+        .setAllowExpression(true)
+        .build();
 
-    private TrustDomainResourceDefinition() {
-        super(ModelElement.IDENTITY_PROVIDER_TRUST_DOMAIN, TrustDomainAddHandler.INSTANCE, TrustDomainRemoveHandler.INSTANCE);
+    public static final KeyResourceDefinition INSTANCE = new KeyResourceDefinition();
+
+    private KeyResourceDefinition() {
+        super(ModelElement.KEY, KeyAddHandler.INSTANCE, KeyRemoveHandler.INSTANCE, HOST);
     }
 }

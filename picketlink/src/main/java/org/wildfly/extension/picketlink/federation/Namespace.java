@@ -27,6 +27,7 @@ import org.jboss.dmr.ModelNode;
 import org.jboss.staxmapper.XMLElementReader;
 import org.jboss.staxmapper.XMLElementWriter;
 import org.wildfly.extension.picketlink.federation.model.parser.FederationSubsystemReader_1_0;
+import org.wildfly.extension.picketlink.federation.model.parser.FederationSubsystemReader_2_0;
 import org.wildfly.extension.picketlink.federation.model.parser.FederationSubsystemWriter;
 
 import java.util.HashMap;
@@ -38,10 +39,12 @@ import java.util.Map;
  */
 public enum Namespace {
 
-    PICKETLINK_FEDERATION_1_0(1, 0, new FederationSubsystemReader_1_0(), new FederationSubsystemWriter());
+    PICKETLINK_FEDERATION_1_0(1, 0, new FederationSubsystemReader_1_0(), FederationSubsystemWriter.INSTANCE),
+    PICKETLINK_FEDERATION_2_0(2, 0, new FederationSubsystemReader_2_0(), FederationSubsystemWriter.INSTANCE);
 
-    public static final Namespace CURRENT = PICKETLINK_FEDERATION_1_0;
-    private static final String BASE_URN = "urn:jboss:domain:picketlink-federation:";
+    public static final Namespace CURRENT = PICKETLINK_FEDERATION_2_0;
+    public static final String BASE_URN = "urn:jboss:domain:picketlink-federation:";
+
     private static final Map<String, Namespace> namespaces;
 
     static {

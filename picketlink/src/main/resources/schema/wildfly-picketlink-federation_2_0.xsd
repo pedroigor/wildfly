@@ -14,8 +14,8 @@
 	Franklin St, Fifth Floor, Boston, MA ~ 02110-1301 USA, or see the FSF site:
 	http://www.fsf.org. -->
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-            targetNamespace="urn:jboss:domain:picketlink-federation:1.0"
-            xmlns="urn:jboss:domain:picketlink-federation:1.0"
+            targetNamespace="urn:jboss:domain:picketlink-federation:2.0"
+            xmlns="urn:jboss:domain:picketlink-federation:2.0"
             elementFormDefault="qualified"
             attributeFormDefault="unqualified"
             version="1.0">

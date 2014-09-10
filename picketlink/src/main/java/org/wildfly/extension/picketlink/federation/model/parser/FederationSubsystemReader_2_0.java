@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012, Red Hat, Inc., and individual contributors
+ * Copyright 2013, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -20,20 +20,13 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.wildfly.extension.picketlink.federation.model.idp;
-
-import org.wildfly.extension.picketlink.common.model.ModelElement;
-import org.wildfly.extension.picketlink.federation.model.AbstractFederationResourceDefinition;
+package org.wildfly.extension.picketlink.federation.model.parser;
 
 /**
+ * <p> XML Reader for the subsystem schema, version 2.0. </p>
+ *
  * @author <a href="mailto:psilva@redhat.com">Pedro Silva</a>
- * @since Mar 16, 2012
  */
-public class TrustDomainResourceDefinition extends AbstractFederationResourceDefinition {
+public class FederationSubsystemReader_2_0 extends AbstractFederationSubsystemReader {
 
-    public static final TrustDomainResourceDefinition INSTANCE = new TrustDomainResourceDefinition();
-
-    private TrustDomainResourceDefinition() {
-        super(ModelElement.IDENTITY_PROVIDER_TRUST_DOMAIN, TrustDomainAddHandler.INSTANCE, TrustDomainRemoveHandler.INSTANCE);
-    }
 }
