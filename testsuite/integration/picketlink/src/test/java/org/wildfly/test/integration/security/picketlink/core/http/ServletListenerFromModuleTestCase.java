@@ -23,9 +23,11 @@
 package org.wildfly.test.integration.security.picketlink.core.http;
 
 import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.HttpUnitOptions;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import org.apache.http.HttpStatus;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.junit.Arquillian;
@@ -36,10 +38,13 @@ import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.picketlink.common.util.Base64;
 
 import java.net.URL;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Pedro Igor
@@ -72,10 +77,25 @@ public class ServletListenerFromModuleTestCase {
 
     @Test
     public void testBasicAuthentication(@ArquillianResource URL deploymentUrl) throws Exception {
+        HttpUnitOptions.setExceptionsThrownOnErrorStatus(false);
         WebRequest request = new GetMethodWebRequest(deploymentUrl.toString());
         WebConversation conversation = new WebConversation();
         WebResponse response = conversation.getResponse(request);
 
         assertEquals(401, response.getResponseCode());
+
+        String authenticateHeader = response.getHeaderField("WWW-Authenticate");
+
+        assertNotNull(authenticateHeader);
+        assertTrue(authenticateHeader.contains("Basic realm=\"PicketLink HTTP Basic Quickstart Realm\""));
+
+        request.setHeaderField("Authorization",
+                new String("Basic " + Base64.encodeBytes(String.valueOf("jane:abcd1234").getBytes())));
+
+        response = conversation.getResponse(request);
+
+        assertEquals(HttpStatus.SC_OK, response.getResponseCode());
+        assertEquals("Authenticated user is: jane", response.getText());
+
     }
 }
