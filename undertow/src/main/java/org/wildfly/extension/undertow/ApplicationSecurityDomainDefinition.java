@@ -22,20 +22,16 @@
 
 package org.wildfly.extension.undertow;
 
-import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionManager;
+import io.undertow.servlet.api.AuthMethodConfig;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
@@ -67,16 +63,26 @@ import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.InjectedValue;
 import org.wildfly.elytron.web.undertow.server.ElytronContextAssociationHandler;
+import org.wildfly.elytron.web.undertow.server.ElytronHttpExchange;
 import org.wildfly.elytron.web.undertow.server.ElytronRunAsHandler;
 import org.wildfly.security.auth.server.HttpAuthenticationFactory;
 import org.wildfly.security.http.HttpAuthenticationException;
 import org.wildfly.security.http.HttpServerAuthenticationMechanism;
+import org.wildfly.security.http.HttpServerSession;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.servlet.api.AuthMethodConfig;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.LoginConfig;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
 
 /**
  * A {@link ResourceDefinition} to define the mapping from a security domain as specified in a web application
@@ -290,7 +296,51 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
         }
 
         private HttpHandler initialSecurityHandler(final DeploymentInfo deploymentInfo, HttpHandler toWrap) {
-            return new ElytronContextAssociationHandler(toWrap, () -> getAuthenticationMechanisms(() -> desiredMechanisms(deploymentInfo)));
+            return new ElytronContextAssociationHandler(toWrap, () -> getAuthenticationMechanisms(() -> desiredMechanisms(deploymentInfo))) {
+                @Override
+                protected ElytronHttpExchange createHttpExchange(HttpServerExchange exchange) {
+                    return new ElytronHttpExchange(exchange) {
+                        @Override
+                        public HttpServerSession getSession(boolean create) {
+                            ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                            SessionManager sessionManager = requestContext.getDeployment().getSessionManager();
+                            SessionConfig sessionConfig = requestContext.getCurrentServletContext().getSessionConfig();
+                            Session session = sessionManager.getSession(exchange, sessionConfig);
+
+                            if (create && session == null) {
+                                session = sessionManager.createSession(exchange, sessionConfig);
+                            }
+
+                            if (session != null) {
+                                return createSession(session);
+                            }
+
+                            return null;
+                        }
+
+                        @Override
+                        public HttpServerSession getSession(String id) {
+                            ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                            SessionManager sessionManager = requestContext.getDeployment().getSessionManager();
+                            Session session = sessionManager.getSession(id);
+
+                            if (session != null) {
+                                return createSession(session);
+                            }
+
+                            return null;
+                        }
+
+                        @Override
+                        public Set<String> getSessions() {
+                            ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                            SessionManager sessionManager = requestContext.getDeployment().getSessionManager();
+
+                            return sessionManager.getAllSessions();
+                        }
+                    };
+                }
+            };
         }
 
         private HttpHandler finalSecurityHandlers(HttpHandler toWrap) {
