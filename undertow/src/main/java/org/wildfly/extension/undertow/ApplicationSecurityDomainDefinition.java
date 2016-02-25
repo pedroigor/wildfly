@@ -291,12 +291,12 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
                 throw new IllegalStateException(e);
             }
         }
-        private List<HttpServerAuthenticationMechanism> getAuthenticationMechanisms(Supplier<List<String>> mechanismNames) {
-            return mechanismNames.get().stream().map(this::createMechanism).collect(Collectors.toList());
+        private List<HttpServerAuthenticationMechanism> getAuthenticationMechanisms(DeploymentInfo deploymentInfo) {
+            return desiredMechanisms(deploymentInfo).stream().map(this::createMechanism).collect(Collectors.toList());
         }
 
         private HttpHandler initialSecurityHandler(final DeploymentInfo deploymentInfo, HttpHandler toWrap) {
-            return new ElytronContextAssociationHandler(toWrap, () -> getAuthenticationMechanisms(() -> desiredMechanisms(deploymentInfo))) {
+            return new ElytronContextAssociationHandler(toWrap, () -> getAuthenticationMechanisms(deploymentInfo)) {
                 @Override
                 protected ElytronHttpExchange createHttpExchange(HttpServerExchange exchange) {
                     return new ElytronHttpExchange(exchange) {
