@@ -128,5 +128,8 @@
 
     <application-security-domains>
         <application-security-domain security-domain="other" http-authentication-factory="elytron-factory" override-deployment-config="true" />
+        <application-security-domain security-domain="with-single-sign-on" http-authentication-factory="elytron-factory">
+            <single-sign-on domain="localhost"/>
+        </application-security-domain>
     </application-security-domains>
 </subsystem>
