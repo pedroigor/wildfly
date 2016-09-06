@@ -45,5 +45,6 @@
         <module name="org.wildfly.clustering.web.api"/>
         <module name="org.wildfly.clustering.web.spi"/>
         <module name="org.wildfly.extension.undertow"/>
+        <module name="org.wildfly.security.elytron"/>
     </dependencies>
 </module>

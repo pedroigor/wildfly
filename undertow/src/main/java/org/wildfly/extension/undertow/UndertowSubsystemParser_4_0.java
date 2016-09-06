@@ -295,6 +295,7 @@ public class UndertowSubsystemParser_4_0 extends PersistentResourceXMLParser {
                             .setXmlWrapperElement(Constants.APPLICATION_SECURITY_DOMAINS)
                             .setNameAttributeName(Constants.SECURITY_DOMAIN)
                             .addAttributes(ApplicationSecurityDomainDefinition.HTTP_AUTHENTICATION_FACTORY, ApplicationSecurityDomainDefinition.OVERRIDE_DEPLOYMENT_CONFIG)
+                            .addChild(builder(ElytronSingleSignOnDefinition.INSTANCE).setNameAttributeName(Constants.DOMAIN).addAttributes(ElytronSingleSignOnDefinition.COOKIE_NAME, ElytronSingleSignOnDefinition.DOMAIN, ElytronSingleSignOnDefinition.HTTP_ONLY, ElytronSingleSignOnDefinition.PATH, ElytronSingleSignOnDefinition.SECURE))
                 )
                  //here to make sure we always add filters & handlers path to mgmt model
                 .setAdditionalOperationsGenerator(new PersistentResourceXMLDescription.AdditionalOperationsGenerator() {
