@@ -24,13 +24,14 @@
 
 package org.wildfly.extension.undertow;
 
-import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.PersistentResourceDefinition;
 import org.jboss.as.controller.ReloadRequiredRemoveStepHandler;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.operations.validation.StringLengthValidator;
+import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 
@@ -72,12 +73,35 @@ class ElytronSingleSignOnDefinition extends PersistentResourceDefinition {
             .setDefaultValue(new ModelNode("JSESSIONIDSSO"))
             .build();
 
-    static final List<AttributeDefinition> ATTRIBUTES = Arrays.<AttributeDefinition>asList(DOMAIN, PATH, HTTP_ONLY, SECURE, COOKIE_NAME);
+    static final SimpleAttributeDefinition KEY_STORE = new SimpleAttributeDefinitionBuilder("key-store", ModelType.STRING, false)
+            .setAllowNull(false)
+            .setAllowExpression(true)
+            .build();
+
+    static final SimpleAttributeDefinition KEY_ALIAS = new SimpleAttributeDefinitionBuilder("key-alias", ModelType.STRING, false)
+            .setAllowNull(false)
+            .setAllowExpression(true)
+            .build();
+
+    static final SimpleAttributeDefinition KEY_PASSWORD = new SimpleAttributeDefinitionBuilder("key-password", ModelType.STRING, false)
+            .setAllowNull(false)
+            .setAllowExpression(true)
+            .build();
+
+    static final SimpleAttributeDefinition SSL_CONTEXT = new SimpleAttributeDefinitionBuilder("client-ssl-context", ModelType.STRING, true)
+            .setFlags(AttributeAccess.Flag.RESTART_ALL_SERVICES)
+            .setValidator(new StringLengthValidator(1))
+            .build();
+
+    static final List<AttributeDefinition> ATTRIBUTES = Arrays.<AttributeDefinition>asList(DOMAIN, PATH, HTTP_ONLY, SECURE, COOKIE_NAME, KEY_STORE, KEY_ALIAS, KEY_PASSWORD, SSL_CONTEXT);
 
     static final ElytronSingleSignOnDefinition INSTANCE = new ElytronSingleSignOnDefinition();
 
     private ElytronSingleSignOnDefinition() {
-        super(PathElement.pathElement(Constants.SINGLE_SIGN_ON), UndertowExtension.getResolver(Constants.SINGLE_SIGN_ON), new AbstractAddStepHandler(), ReloadRequiredRemoveStepHandler.INSTANCE);
+        super(PathElement.pathElement(Constants.SINGLE_SIGN_ON),
+                UndertowExtension.getResolver(Constants.SINGLE_SIGN_ON),
+                new ReloadRequiredAddStepHandler(ATTRIBUTES),
+                ReloadRequiredRemoveStepHandler.INSTANCE);
     }
 
     @Override

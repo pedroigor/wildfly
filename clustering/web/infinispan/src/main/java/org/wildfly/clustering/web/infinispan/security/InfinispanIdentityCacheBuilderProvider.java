@@ -19,17 +19,26 @@ import org.wildfly.clustering.service.SubGroupServiceNameFactory;
 import org.wildfly.clustering.spi.CacheGroupServiceName;
 import org.wildfly.clustering.web.infinispan.session.InfinispanRouteLocatorBuilder;
 import org.wildfly.clustering.web.security.IdentityCacheFactoryBuilderProvider;
-import org.wildfly.security.http.util.SingleSignOnServerMechanismFactory.IdentityCacheFactory;
+import org.wildfly.security.http.HttpServerRequest;
+import org.wildfly.security.http.util.sso.DefaultSingleSignOnSessionFactory;
+import org.wildfly.security.http.util.sso.SingleSignOnSession;
+import org.wildfly.security.http.util.sso.SingleSignOnSessionFactory;
 
-import java.util.Map;
+import javax.net.ssl.SSLContext;
+import java.security.KeyStore;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Igor</a>
  */
-public class InfinispanIdentityCacheBuilderProvider implements IdentityCacheFactoryBuilderProvider, Value<IdentityCacheFactory>, IdentityCacheFactory {
+public class InfinispanIdentityCacheBuilderProvider implements IdentityCacheFactoryBuilderProvider, Value<SingleSignOnSessionFactory>, SingleSignOnSessionFactory {
 
     private static final String DEFAULT_CONTAINER = "elytron";
     private final String name;
+    private final InjectedValue<KeyStore> keyStore;
+    private final String keyAlias;
+    private final String keyPassword;
+    private final InjectedValue<SSLContext> sslContext;
+    private SingleSignOnSessionFactory singleSignOnSessionFactory;
 
     private static ServiceName getCacheServiceName(String cacheName) {
         ServiceName baseServiceName = CacheContainerServiceName.CACHE_CONTAINER.getServiceName("elytron").getParent();
@@ -42,8 +51,12 @@ public class InfinispanIdentityCacheBuilderProvider implements IdentityCacheFact
 
     private final InjectedValue<Cache> cache = new InjectedValue<>();
 
-    public InfinispanIdentityCacheBuilderProvider(String name) {
+    public InfinispanIdentityCacheBuilderProvider(String name, InjectedValue<KeyStore> keyStore, String keyAlias, String keyPassword, InjectedValue<SSLContext> sslContext) {
         this.name = name;
+        this.keyStore = keyStore;
+        this.keyAlias = keyAlias;
+        this.keyPassword = keyPassword;
+        this.sslContext = sslContext;
     }
 
     @Override
@@ -74,12 +87,29 @@ public class InfinispanIdentityCacheBuilderProvider implements IdentityCacheFact
     }
 
     @Override
-    public IdentityCacheFactory getValue() throws IllegalStateException, IllegalArgumentException {
+    public SingleSignOnSessionFactory getValue() throws IllegalStateException, IllegalArgumentException {
         return this;
     }
 
     @Override
-    public Map<String, Object> create() {
-        return cache.getValue();
+    public SingleSignOnSession findById(String id, HttpServerRequest request) {
+        return getSingleSignSessionFactory().findById(id, request);
+    }
+
+    @Override
+    public SingleSignOnSession create(HttpServerRequest request, String mechanismName) {
+        return getSingleSignSessionFactory().create(request, mechanismName);
+    }
+
+    @Override
+    public void logout(SingleSignOnSession singleSignOnSession) {
+        getSingleSignSessionFactory().logout(singleSignOnSession);
+    }
+
+    private SingleSignOnSessionFactory getSingleSignSessionFactory() {
+        if (singleSignOnSessionFactory == null) {
+            singleSignOnSessionFactory = new DefaultSingleSignOnSessionFactory(cache.getValue(), keyStore.getValue(), keyAlias, keyPassword, sslContext.getValue());
+        }
+        return singleSignOnSessionFactory;
     }
 }

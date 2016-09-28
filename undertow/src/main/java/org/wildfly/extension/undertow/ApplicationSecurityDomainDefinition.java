@@ -22,43 +22,16 @@
 
 package org.wildfly.extension.undertow;
 
-import static io.undertow.util.StatusCodes.OK;
-import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
-import static org.wildfly.extension.undertow.Constants.SINGLE_SIGN_ON;
-import static org.wildfly.extension.undertow.logging.UndertowLogger.ROOT_LOGGER;
-import static org.wildfly.security.http.HttpConstants.CONFIG_CONTEXT_PATH;
-import static org.wildfly.security.http.HttpConstants.CONFIG_ERROR_PAGE;
-import static org.wildfly.security.http.HttpConstants.CONFIG_LOGIN_PAGE;
-import static org.wildfly.security.http.HttpConstants.CONFIG_REALM;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
-import javax.servlet.http.HttpSession;
-
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionManager;
+import io.undertow.servlet.api.AuthMethodConfig;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.util.SavedRequest;
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
@@ -96,7 +69,7 @@ import org.wildfly.elytron.web.undertow.server.ElytronContextAssociationHandler;
 import org.wildfly.elytron.web.undertow.server.ElytronHttpExchange;
 import org.wildfly.elytron.web.undertow.server.ElytronRunAsHandler;
 import org.wildfly.elytron.web.undertow.server.ScopeSessionListener;
-import org.wildfly.extension.undertow.security.sso.IdentityCacheFactoryServiceBuilder;
+import org.wildfly.extension.undertow.security.sso.SingleSignOnManagerFactoryServiceBuilder;
 import org.wildfly.security.auth.server.HttpAuthenticationFactory;
 import org.wildfly.security.http.HttpAuthenticationException;
 import org.wildfly.security.http.HttpScope;
@@ -104,20 +77,48 @@ import org.wildfly.security.http.HttpServerAuthenticationMechanism;
 import org.wildfly.security.http.HttpServerAuthenticationMechanismFactory;
 import org.wildfly.security.http.Scope;
 import org.wildfly.security.http.util.PropertiesServerMechanismFactory;
+import org.wildfly.security.http.util.sso.SingleSignOnServerMechanismFactory;
+import org.wildfly.security.http.util.sso.SingleSignOnServerMechanismFactory.SingleSignOnConfiguration;
+import org.wildfly.security.http.util.sso.SingleSignOnSessionFactory;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.server.session.SessionConfig;
-import io.undertow.server.session.SessionManager;
-import io.undertow.servlet.api.AuthMethodConfig;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.LoginConfig;
-import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.util.SavedRequest;
-import org.wildfly.security.http.util.SingleSignOnServerMechanismFactory;
-import org.wildfly.security.http.util.SingleSignOnServerMechanismFactory.IdentityCacheFactory;
-import org.wildfly.security.http.util.SingleSignOnServerMechanismFactory.SingleSignOnCookieManager;
+import javax.net.ssl.SSLContext;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+
+import static io.undertow.util.StatusCodes.OK;
+import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
+import static org.wildfly.extension.undertow.Constants.SINGLE_SIGN_ON;
+import static org.wildfly.extension.undertow.HttpsListenerResourceDefinition.SSL_CONTEXT_CAPABILITY;
+import static org.wildfly.extension.undertow.logging.UndertowLogger.ROOT_LOGGER;
+import static org.wildfly.security.http.HttpConstants.CONFIG_CONTEXT_PATH;
+import static org.wildfly.security.http.HttpConstants.CONFIG_ERROR_PAGE;
+import static org.wildfly.security.http.HttpConstants.CONFIG_LOGIN_PAGE;
+import static org.wildfly.security.http.HttpConstants.CONFIG_REALM;
 
 /**
  * A {@link ResourceDefinition} to define the mapping from a security domain as specified in a web application
@@ -134,6 +135,7 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             .build();
 
     private static final String HTTP_AUTHENITCATION_FACTORY_CAPABILITY = "org.wildfly.security.http-authentication-factory";
+    private static final String KEY_STORE_CAPABILITY = "org.wildfly.security.key-store";
 
     static SimpleAttributeDefinition HTTP_AUTHENTICATION_FACTORY = new SimpleAttributeDefinitionBuilder(Constants.HTTP_AUTHENITCATION_FACTORY, ModelType.STRING, false)
             .setMinSize(1)
@@ -245,25 +247,41 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             Set<ResourceEntry> singleSignOnChild = resource.getChildren(SINGLE_SIGN_ON);
 
             if (!singleSignOnChild.isEmpty()) {
-                Iterator<IdentityCacheFactoryServiceBuilder> iterator = ServiceLoader.load(IdentityCacheFactoryServiceBuilder.class, ApplicationSecurityDomainDefinition.class.getClassLoader()).iterator();
+                Iterator<SingleSignOnManagerFactoryServiceBuilder> iterator = ServiceLoader.load(SingleSignOnManagerFactoryServiceBuilder.class, ApplicationSecurityDomainDefinition.class.getClassLoader()).iterator();
 
                 if (iterator.hasNext()) {
                     ResourceEntry resourceEntry = singleSignOnChild.iterator().next();
                     ModelNode singleSignOnNode = resourceEntry.getModel();
                     String domain = resourceEntry.getName();
-                    String cookieName = ElytronSingleSignOnDefinition.COOKIE_NAME.resolveValue(context, singleSignOnNode).asString();
-                    String path = ElytronSingleSignOnDefinition.PATH.resolveValue(context, singleSignOnNode).asString();
-                    boolean httpOnly = ElytronSingleSignOnDefinition.HTTP_ONLY.resolveValue(context, singleSignOnNode).asBoolean();
-                    boolean secure = ElytronSingleSignOnDefinition.SECURE.resolveValue(context, singleSignOnNode).asBoolean();
-                    SingleSignOnCookieManager singleSignOnCookieConfig = new SingleSignOnCookieManager(cookieName, domain, path, httpOnly, secure);
+                    String cookieName = ElytronSingleSignOnDefinition.COOKIE_NAME.resolveModelAttribute(context, singleSignOnNode).asString();
+                    String path = ElytronSingleSignOnDefinition.PATH.resolveModelAttribute(context, singleSignOnNode).asString();
+                    boolean httpOnly = ElytronSingleSignOnDefinition.HTTP_ONLY.resolveModelAttribute(context, singleSignOnNode).asBoolean();
+                    boolean secure = ElytronSingleSignOnDefinition.SECURE.resolveModelAttribute(context, singleSignOnNode).asBoolean();
+                    String keyStore = ElytronSingleSignOnDefinition.KEY_STORE.resolveModelAttribute(context, singleSignOnNode).asString();
+                    String keyAlias = ElytronSingleSignOnDefinition.KEY_ALIAS.resolveModelAttribute(context, singleSignOnNode).asString();
+                    String keyPassword = ElytronSingleSignOnDefinition.KEY_PASSWORD.resolveModelAttribute(context, singleSignOnNode).asString();
+                    String clientSslContext = ElytronSingleSignOnDefinition.SSL_CONTEXT.resolveModelAttribute(context, singleSignOnNode).asString();
                     ServiceName name = serviceName.append("identity");
-                    IdentityCacheFactoryServiceBuilder clusteredIdentityCache = iterator.next();
+                    SingleSignOnManagerFactoryServiceBuilder clusteredIdentityCache = iterator.next();
 
-                    clusteredIdentityCache.build(context.getServiceTarget(), name, context.getCurrentAddressValue())
+                    InjectedValue<KeyStore> keyStoreInjector = new InjectedValue<>();
+                    InjectedValue<SSLContext> sslContextInjector = new InjectedValue<>();
+
+                    serviceBuilder.addDependency(context.getCapabilityServiceName(
+                            buildDynamicCapabilityName(KEY_STORE_CAPABILITY, keyStore), KeyStore.class),
+                            KeyStore.class, keyStoreInjector);
+                    serviceBuilder.addDependency(context.getCapabilityServiceName(
+                            buildDynamicCapabilityName(SSL_CONTEXT_CAPABILITY, clientSslContext), SSLContext.class),
+                            SSLContext.class, sslContextInjector);
+
+                    clusteredIdentityCache.build(context.getServiceTarget(), name, context.getCurrentAddressValue(), keyStoreInjector, keyAlias, keyPassword, sslContextInjector)
                             .setInitialMode(Mode.ON_DEMAND)
                             .install();
-                    serviceBuilder.addDependency(name, IdentityCacheFactory.class, applicationSecurityDomainService.getIdentityCacheFactoryInjector());
-                    serviceBuilder.addInjectionValue(applicationSecurityDomainService.getSingleSignOnCookieManager(), new ImmediateValue<>(singleSignOnCookieConfig));
+                    serviceBuilder.addDependency(name, SingleSignOnSessionFactory.class, applicationSecurityDomainService.getSingleSignOnManagerFactoryInjector());
+
+                    SingleSignOnConfiguration singleSignOnCookieConfig = new SingleSignOnConfiguration(cookieName, domain, path, httpOnly, secure);
+
+                    serviceBuilder.addInjectionValue(applicationSecurityDomainService.SingleSignOnConfiguration(), new ImmediateValue<>(singleSignOnCookieConfig));
                 }
             }
         }
@@ -307,10 +325,10 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
         private final boolean overrideDeploymentConfig;
         private final InjectedValue<HttpAuthenticationFactory> httpAuthenticationFactoryInjector = new InjectedValue<>();
         private final Set<RegistrationImpl> registrations = new HashSet<>();
-        private final InjectedValue<SingleSignOnCookieManager> singleSignOnCookieManager = new InjectedValue<>();
-        private final InjectedValue<IdentityCacheFactory> identityCacheInjector = new InjectedValue<>();
+        private final InjectedValue<SingleSignOnConfiguration> singleSignOnCookieManager = new InjectedValue<>();
+        private final InjectedValue<SingleSignOnSessionFactory> singleSignOnSessionFactoryInjector = new InjectedValue<>();
         private HttpAuthenticationFactory httpAuthenticationFactory;
-        private IdentityCacheFactory identityCacheFactory;
+        private SingleSignOnSessionFactory identityCacheFactory;
 
         private ApplicationSecurityDomainService(final boolean overrideDeploymentConfig) {
             this.overrideDeploymentConfig = overrideDeploymentConfig;
@@ -319,7 +337,7 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
         @Override
         public void start(StartContext context) throws StartException {
             httpAuthenticationFactory = httpAuthenticationFactoryInjector.getValue();
-            identityCacheFactory = identityCacheInjector.getOptionalValue();
+            identityCacheFactory = singleSignOnSessionFactoryInjector.getOptionalValue();
         }
 
         @Override
@@ -336,8 +354,8 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             return httpAuthenticationFactoryInjector;
         }
 
-        private Injector<IdentityCacheFactory> getIdentityCacheFactoryInjector() {
-            return this.identityCacheInjector;
+        private Injector<SingleSignOnSessionFactory> getSingleSignOnManagerFactoryInjector() {
+            return this.singleSignOnSessionFactoryInjector;
         }
 
         private Registration applyElytronSecurity(final DeploymentInfo deploymentInfo) {
@@ -569,7 +587,7 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             }
         }
 
-        Injector<SingleSignOnCookieManager> getSingleSignOnCookieManager() {
+        Injector<SingleSignOnConfiguration> SingleSignOnConfiguration() {
             return singleSignOnCookieManager;
         }
 
