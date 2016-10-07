@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -54,6 +55,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 import javax.servlet.http.HttpSession;
 
+import io.undertow.servlet.spec.HttpSessionImpl;
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
@@ -91,6 +93,7 @@ import org.wildfly.elytron.web.undertow.server.ScopeSessionListener;
 import org.wildfly.security.auth.server.HttpAuthenticationFactory;
 import org.wildfly.security.http.HttpAuthenticationException;
 import org.wildfly.security.http.HttpScope;
+import org.wildfly.security.http.HttpScopeNotification;
 import org.wildfly.security.http.HttpServerAuthenticationMechanism;
 import org.wildfly.security.http.Scope;
 import org.wildfly.security.http.util.PropertiesServerMechanismFactory;
@@ -366,6 +369,7 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
 
             scopeResolvers.put(Scope.APPLICATION, ApplicationSecurityDomainService::applicationScope);
             scopeResolvers.put(Scope.EXCHANGE, ApplicationSecurityDomainService::requestScope);
+            scopeResolvers.put(Scope.SESSION, exchange -> sessionScope(exchange, scopeSessionListener));
 
             return ElytronContextAssociationHandler.builder()
                     .setNext(toWrap)
@@ -492,6 +496,81 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             }
 
             return null;
+        }
+
+        private static HttpScope sessionScope(HttpServerExchange exchange, ScopeSessionListener scopeSessionListener) {
+            ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            final HttpSessionImpl sessionOriginal = servletRequestContext.getSession();
+
+            return new HttpScope() {
+
+                private HttpSession session = sessionOriginal;
+
+                @Override
+                public String getID() {
+                    return session.getId();
+                }
+
+                @Override
+                public boolean exists() {
+                    return session != null;
+                }
+
+                @Override
+                public boolean create() {
+                    if (exists()) {
+                        return false;
+                    }
+                    session = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
+                    return session != null;
+                }
+
+                @Override
+                public boolean supportsAttachments() {
+                    return exists();
+                }
+
+                @Override
+                public void setAttachment(String key, Object value) {
+                    if (supportsAttachments()) {
+                        session.setAttribute(key, value);
+                    }
+                }
+
+                @Override
+                public Object getAttachment(String key) {
+                    if (supportsAttachments()) {
+                        return session.getAttribute(key);
+                    }
+                    return null;
+                }
+
+                @Override
+                public boolean supportsInvalidation() {
+                    return exists();
+                }
+
+                @Override
+                public boolean invalidate() {
+                    if (supportsInvalidation()) {
+                        session.invalidate();
+                        return true;
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean supportsNotifications() {
+                    return exists() && scopeSessionListener != null;
+                }
+
+                @Override
+                public void registerForNotification(Consumer<HttpScopeNotification> notificationConsumer) {
+                    if (supportsNotifications()) {
+                        scopeSessionListener.registerListener(session.getId(), notificationConsumer);
+                    }
+                }
+            };
         }
 
         private HttpHandler finalSecurityHandlers(HttpHandler toWrap) {
