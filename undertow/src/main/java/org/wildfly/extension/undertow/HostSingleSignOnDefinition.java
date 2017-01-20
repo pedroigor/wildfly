@@ -32,7 +32,7 @@ import org.jboss.as.controller.registry.ManagementResourceRegistration;
 public class HostSingleSignOnDefinition extends SingleSignOnDefinition {
 
     HostSingleSignOnDefinition() {
-        super(Constants.HOST);
+        super(UndertowExtension.PATH_SSO, Constants.HOST);
     }
 
     @Override

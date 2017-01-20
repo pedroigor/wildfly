@@ -30,6 +30,7 @@ import org.jboss.as.clustering.controller.ReloadRequiredResourceRegistration;
 import org.jboss.as.clustering.controller.ResourceDescriptor;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.PathAddress;
+import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
@@ -86,7 +87,7 @@ public class ApplicationSecurityDomainSingleSignOnDefinition extends SingleSignO
     }
 
     ApplicationSecurityDomainSingleSignOnDefinition() {
-        super(Constants.APPLICATION_SECURITY_DOMAIN);
+        super(PathElement.pathElement(Constants.SINGLE_SIGN_ON), Constants.APPLICATION_SECURITY_DOMAIN);
     }
 
     @Override

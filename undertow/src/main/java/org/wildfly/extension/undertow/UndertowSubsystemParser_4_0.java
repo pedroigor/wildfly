@@ -24,6 +24,7 @@ package org.wildfly.extension.undertow;
 
 import static org.jboss.as.controller.PersistentResourceXMLDescription.builder;
 
+import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.PersistentResourceDefinition;
 import org.jboss.as.controller.PersistentResourceXMLDescription;
 import org.jboss.as.controller.PersistentResourceXMLParser;
@@ -320,7 +321,8 @@ public class UndertowSubsystemParser_4_0 extends PersistentResourceXMLParser {
                         builder(ApplicationSecurityDomainDefinition.INSTANCE.getPathElement())
                             .setXmlWrapperElement(Constants.APPLICATION_SECURITY_DOMAINS)
                             .addAttributes(ApplicationSecurityDomainDefinition.HTTP_AUTHENTICATION_FACTORY, ApplicationSecurityDomainDefinition.OVERRIDE_DEPLOYMENT_CONFIG)
-                            .addChild(builder(UndertowExtension.PATH_SSO)
+                            .addChild(builder(PathElement.pathElement(Constants.SINGLE_SIGN_ON))
+                                    .setForcedName(Constants.SINGLE_SIGN_ON)
                                     .addAttribute(ApplicationSecurityDomainSingleSignOnDefinition.Attribute.KEY_STORE.getDefinition())
                                     .addAttribute(ApplicationSecurityDomainSingleSignOnDefinition.Attribute.KEY_ALIAS.getDefinition())
                                     .addAttribute(ApplicationSecurityDomainSingleSignOnDefinition.Attribute.CREDENTIAL.getDefinition())

@@ -42,7 +42,9 @@ public class ReloadRequiredAddStepHandler extends AddStepHandler {
 
     @Override
     protected void performRuntime(OperationContext context, ModelNode operation, ModelNode model) {
-        context.reloadRequired();
+        if (!context.isBooting()) {
+            context.reloadRequired();
+        }
     }
 
     @Override

@@ -136,5 +136,10 @@
 
     <application-security-domains>
         <application-security-domain name="other" http-authentication-factory="elytron-factory" override-deployment-config="true" />
+        <application-security-domain name="sso" http-authentication-factory="elytron-factory" override-deployment-config="true">
+            <single-sign-on key-alias="server" key-store="application.keystore">
+                <credential-reference clear-text="password"/>
+            </single-sign-on>
+        </application-security-domain>
     </application-security-domains>
 </subsystem>

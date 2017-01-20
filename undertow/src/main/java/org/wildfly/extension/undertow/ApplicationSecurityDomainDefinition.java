@@ -23,6 +23,7 @@
 package org.wildfly.extension.undertow;
 
 import static io.undertow.util.StatusCodes.OK;
+import static org.wildfly.extension.undertow.Constants.SINGLE_SIGN_ON;
 import static org.wildfly.extension.undertow.logging.UndertowLogger.ROOT_LOGGER;
 import static org.wildfly.security.http.HttpConstants.CONFIG_CONTEXT_PATH;
 import static org.wildfly.security.http.HttpConstants.CONFIG_ERROR_PAGE;
@@ -175,8 +176,8 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
     }
 
     @Override
-    protected List<? extends PersistentResourceDefinition> getChildren() {
-        return Collections.singletonList(new ApplicationSecurityDomainSingleSignOnDefinition());
+    public void registerChildren(ManagementResourceRegistration resourceRegistration) {
+        resourceRegistration.registerSubModel(new ApplicationSecurityDomainSingleSignOnDefinition());
     }
 
     private static class ReferencingDeploymentsHandler implements OperationStepHandler {
@@ -239,8 +240,11 @@ public class ApplicationSecurityDomainDefinition extends PersistentResourceDefin
             serviceBuilder.addDependency(context.getCapabilityServiceName(HTTP_AUTHENITCATION_FACTORY_CAPABILITY,
                     httpServerMechanismFactory, HttpAuthenticationFactory.class), HttpAuthenticationFactory.class, applicationSecurityDomainService.getHttpAuthenticationFactoryInjector());
 
-            if (model.hasDefined(UndertowExtension.PATH_SSO.getKeyValuePair())) {
-                ModelNode ssoModel = model.get(UndertowExtension.PATH_SSO.getKeyValuePair());
+            Set<Resource.ResourceEntry> singleSignOnChild = resource.getChildren(SINGLE_SIGN_ON);
+
+            if (!singleSignOnChild.isEmpty()) {
+                Resource.ResourceEntry resourceEntry = singleSignOnChild.iterator().next();
+                ModelNode ssoModel = resourceEntry.getModel();
 
                 String cookieName = SingleSignOnDefinition.Attribute.COOKIE_NAME.resolveModelAttribute(context, ssoModel).asString();
                 String domain = SingleSignOnDefinition.Attribute.DOMAIN.resolveModelAttribute(context, ssoModel).asString();

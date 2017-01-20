@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.PersistentResourceDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.dmr.ModelNode;
@@ -49,7 +50,7 @@ class SingleSignOnDefinition extends PersistentResourceDefinition {
         private final AttributeDefinition definition;
 
         Attribute(String name, ModelType type, ModelNode defaultValue) {
-            this.definition = new SimpleAttributeDefinitionBuilder(Constants.DOMAIN, ModelType.STRING)
+            this.definition = new SimpleAttributeDefinitionBuilder(name, type)
                     .setRequired(false)
                     .setAllowExpression(true)
                     .setDefaultValue(defaultValue)
@@ -63,8 +64,8 @@ class SingleSignOnDefinition extends PersistentResourceDefinition {
         }
     }
 
-    SingleSignOnDefinition(String parent) {
-        super(UndertowExtension.PATH_SSO, UndertowExtension.getResolver(parent, Constants.SINGLE_SIGN_ON));
+    SingleSignOnDefinition(PathElement pathElement, String parent) {
+        super(pathElement, UndertowExtension.getResolver(parent, Constants.SINGLE_SIGN_ON));
     }
 
     @Override
